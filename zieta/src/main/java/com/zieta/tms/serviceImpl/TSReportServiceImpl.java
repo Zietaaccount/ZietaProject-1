@@ -30,6 +30,7 @@ public class TSReportServiceImpl implements TSReportService {
     TimeSheetReportHelper timeSheetReportHelper;
     
 	
+    
 	@Override
 	public List<TSReport> getTSReportEntriesFromProcedure(long clientId, String startDate, String endDate) {
 		
@@ -37,7 +38,7 @@ public class TSReportServiceImpl implements TSReportService {
 		return tsReportList;
 	}
 	
-	//REPORT USING USERID AND DATE RANGE	
+	////REPORT USING USERID AND DATE RANGE	
 	/*@Override
 	public List<TSReport> getTSReportEntriesFromProcedureByEmployeeIdAndDateRange(long employeeId, String startDate, String endDate) {
 		
@@ -54,6 +55,7 @@ public class TSReportServiceImpl implements TSReportService {
 		
 		return tsReportList;
 	}
+	
 	
 	
 	@Override
@@ -111,7 +113,6 @@ public class TSReportServiceImpl implements TSReportService {
 		return timeSheetReportHelper.downloadSumReport(response, timeSheetReportList);
 		
 	}
-
 	
 	
 }

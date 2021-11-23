@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.zieta.tms.dto.ExternalProjectMasterDTO;
 import com.zieta.tms.dto.ProjectMasterDTO;
-import com.zieta.tms.model.BydProjectInfo;
 import com.zieta.tms.model.ProjectInfo;
 import com.zieta.tms.model.ProjectMaster;
 import com.zieta.tms.request.EditProjStatusRequest;
@@ -31,6 +31,7 @@ import com.zieta.tms.response.AddProjectResponse;
 import com.zieta.tms.response.ProjectDetailsByUserModel;
 import com.zieta.tms.response.ProjectTypeByClientResponse;
 import com.zieta.tms.response.ProjectsByClientResponse;
+import com.zieta.tms.response.ResponseData;
 import com.zieta.tms.response.RolesByClientResponse;
 import com.zieta.tms.service.ProjectMasterService;
 
@@ -66,7 +67,7 @@ public class ProjectMasterController {
 	
 	//ADD PROJECT FORM BYD SYSTEM	
 	@RequestMapping(value = "addProjectMasterExternal", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public AddProjectResponse addProjectMasterExternal(@Valid @RequestBody BydProjectInfo projectinfo) {
+	public  ResponseData addProjectMasterExternal(@Valid @RequestBody ExternalProjectMasterDTO projectinfo) {
 		return projectmasterService.addExternalProjectinfo(projectinfo);
 	}
 	
@@ -174,12 +175,9 @@ public class ProjectMasterController {
 	@GetMapping("/getAllBYDProjectsByClient")
 	@ApiOperation(value = "List Projects based on the clientId", notes = "Table reference: project_type_master,user_info,project_info,org_info,cust_info")
 	public ResponseEntity<List<ProjectDetailsByUserModel>> getAllBYDProjectsByClient(@RequestParam(required = true) Long clientId) {
-		try {
-			
-			System.out.println("=====Get project from byd system=====>");
-			
-			List<ProjectDetailsByUserModel> projectsbyclientList = projectmasterService.getBYDProjectsByClient(clientId);
-			return new ResponseEntity<List<ProjectDetailsByUserModel>>(projectsbyclientList, HttpStatus.OK);
+		try {			
+				List<ProjectDetailsByUserModel> projectsbyclientList = projectmasterService.getBYDProjectsByClient(clientId);
+				return new ResponseEntity<List<ProjectDetailsByUserModel>>(projectsbyclientList, HttpStatus.OK);
 			
 			
 		} catch (NoSuchElementException e) {
