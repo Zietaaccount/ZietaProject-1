@@ -9,10 +9,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.zieta.tms.byd.service.BYDProjectService;
+//import com.zieta.tms.byd.service.BYDProjectService;
 //import com.zieta.tms.byd.service.BYDProjectService;
 //import com.zieta.tms.byd.connectivity.service.BYDProjectService;
-import com.zieta.tms.dto.ConnectionMasterInfoDTO;
 import com.zieta.tms.service.UserInfoService;
 
 import io.swagger.annotations.Api;

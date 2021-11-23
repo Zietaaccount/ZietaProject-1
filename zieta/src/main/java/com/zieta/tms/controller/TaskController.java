@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.zieta.tms.dto.ExtTaskMasterDTO;
 import com.zieta.tms.dto.TaskMasterDTO;
-import com.zieta.tms.model.ExtTaskInfo;
 import com.zieta.tms.model.TaskInfo;
 import com.zieta.tms.model.TaskTypeMaster;
 import com.zieta.tms.request.EditTasksByClientProjectRequest;

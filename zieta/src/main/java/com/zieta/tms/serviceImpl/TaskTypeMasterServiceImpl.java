@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import com.zieta.tms.dto.ExtTaskMasterDTO;
 import com.zieta.tms.dto.TaskMasterDTO;
 import com.zieta.tms.exception.ExternalIdException;
-import com.zieta.tms.model.ExtTaskInfo;
 import com.zieta.tms.model.ProcessSteps;
 import com.zieta.tms.model.ProjectInfo;
 import com.zieta.tms.model.StatusMaster;
@@ -24,7 +23,6 @@ import com.zieta.tms.model.TasksByUser;
 import com.zieta.tms.model.UserInfo;
 import com.zieta.tms.repository.ClientInfoRepository;
 import com.zieta.tms.repository.CustInfoRepository;
-import com.zieta.tms.repository.ExternalTaskInfoRepository;
 import com.zieta.tms.repository.ProcessConfigRepository;
 import com.zieta.tms.repository.ProcessMasterRepository;
 import com.zieta.tms.repository.ProcessStepsRepository;
@@ -92,9 +90,6 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 
 	@Autowired
 	ModelMapper modelMapper;
-
-	@Autowired
-	ExternalTaskInfoRepository extTaskInfoRepo;
 
 	@Autowired
 	TaskTypeMasterRepository taskTypeRepo;
@@ -317,26 +312,7 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 		}
 
 	}
-
-	public boolean addExtTaskInfo(ExtTaskInfo extTaskInfo) {
-		try {
-
-			ExtTaskInfo extTaskInfoDB = extTaskInfoRepo.save(extTaskInfo);
-
-			ProjectInfo projectInfo = projectInfoRepository.findById(extTaskInfoDB.getExtProjectId()).get();
-
-			List<ProcessSteps> processStepsList = processService.createProcessStepsExt(extTaskInfoDB, projectInfo);
-
-			processStepsRepository.saveAll(processStepsList);
-
-			return true;
-		} catch (Exception ex) {
-			log.error("Exception occured during the save task information", ex);
-			return false;
-		}
-
-	}
-
+	
 	@Override
 	@Transactional
 	public void editTaskInfo(@Valid List<EditTasksByClientProjectRequest> editasksByClientProjectRequest)
