@@ -19,7 +19,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.zieta.tms.dto.ExtTaskMasterDTO;
 import com.zieta.tms.dto.TaskMasterDTO;
+import com.zieta.tms.model.ExtTaskInfo;
 import com.zieta.tms.model.TaskInfo;
 import com.zieta.tms.model.TaskTypeMaster;
 import com.zieta.tms.request.EditTasksByClientProjectRequest;
@@ -147,6 +149,13 @@ public class TaskController {
 	@RequestMapping(value = "addTasksByClientProject", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
 	public void addTasksByClientProject(@Valid @RequestBody List<TaskInfo> taskInfo) {
 		taskTypeMasterService.saveTaskInfo(taskInfo);
+	}
+	
+	
+	@ApiOperation(value = "Persists the tasks related to external client and its associated project", notes = "Table reference: task_info")
+	@RequestMapping(value = "addTasksByClientProjectExternal", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public void addTasksByClientProjectExternal(@Valid @RequestBody ExtTaskMasterDTO extTaskMaster) {
+		taskTypeMasterService.saveExternalTaskInfo(extTaskMaster);
 	}
 	
 	@ApiOperation(value = "Persists the tasks related to client and its associated project", notes = "Table reference: task_info")

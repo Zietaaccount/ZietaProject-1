@@ -3,28 +3,30 @@ package com.zieta.tms.serviceImpl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import javax.transaction.Transactional;
 import javax.validation.Valid;
-
 import org.apache.commons.lang3.StringUtils;
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.zieta.tms.dto.SkillsetUserMappingDTO;
+import com.zieta.tms.dto.ExtTaskMasterDTO;
 import com.zieta.tms.dto.TaskMasterDTO;
+import com.zieta.tms.exception.ExternalIdException;
+import com.zieta.tms.model.ExtTaskInfo;
 import com.zieta.tms.model.ProcessSteps;
 import com.zieta.tms.model.ProjectInfo;
 import com.zieta.tms.model.StatusMaster;
-import com.zieta.tms.model.TSInfo;
 import com.zieta.tms.model.TaskInfo;
 import com.zieta.tms.model.TaskTypeMaster;
 import com.zieta.tms.model.TasksByUser;
 import com.zieta.tms.model.UserInfo;
 import com.zieta.tms.repository.ClientInfoRepository;
+import com.zieta.tms.repository.CustInfoRepository;
+import com.zieta.tms.repository.ExternalTaskInfoRepository;
 import com.zieta.tms.repository.ProcessConfigRepository;
+import com.zieta.tms.repository.ProcessMasterRepository;
 import com.zieta.tms.repository.ProcessStepsRepository;
 import com.zieta.tms.repository.ProjectInfoRepository;
 import com.zieta.tms.repository.StatusMasterRepository;
@@ -35,13 +37,13 @@ import com.zieta.tms.repository.UserInfoRepository;
 import com.zieta.tms.request.EditTasksByClientProjectRequest;
 import com.zieta.tms.request.TaskTypesByClientRequest;
 import com.zieta.tms.request.UpdateTaskInfoRequest;
+import com.zieta.tms.response.AddProjectResponse;
 import com.zieta.tms.response.TaskTypesByClientResponse;
 import com.zieta.tms.response.TasksByClientProjectResponse;
 import com.zieta.tms.response.TasksByUserModel;
 import com.zieta.tms.service.ProcessService;
 import com.zieta.tms.service.TaskTypeMasterService;
 import com.zieta.tms.util.TSMUtil;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -49,7 +51,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 
-	
 	@Autowired
 	TaskTypeMasterRepository taskTypeMasterRepository;
 
@@ -61,27 +62,42 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 
 	@Autowired
 	TaskInfoRepository taskInfoRepository;
-	
+
 	@Autowired
 	StatusMasterRepository statusRepository;
-	
+
 	@Autowired
 	UserInfoRepository userInfoRepository;
-	
+
 	@Autowired
 	ClientInfoRepository clientInfoRepository;
-	
+
 	@Autowired
 	ProcessConfigRepository processConfigRepository;
-	
+
 	@Autowired
 	ProcessStepsRepository processStepsRepository;
-	
+
+	@Autowired
+	CustInfoRepository custInfoRepository;
+
+	@Autowired
+	StatusMasterRepository statusMasterRepository;
+
+	@Autowired
+	ProcessMasterRepository processMasterRepository;
+
 	@Autowired
 	ProcessService processService;
-	
+
 	@Autowired
 	ModelMapper modelMapper;
+
+	@Autowired
+	ExternalTaskInfoRepository extTaskInfoRepo;
+
+	@Autowired
+	TaskTypeMasterRepository taskTypeRepo;
 
 	@Override
 	public List<TaskMasterDTO> getAllTasks() {
@@ -90,10 +106,13 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 		List<TaskMasterDTO> taskMasterDTOs = new ArrayList<TaskMasterDTO>();
 		TaskMasterDTO taskMasterDTO = null;
 		for (TaskTypeMaster taskTypeMaster : taskTypeMasters) {
-			taskMasterDTO = modelMapper.map(taskTypeMaster,TaskMasterDTO.class);
-			taskMasterDTO.setClientCode(clientInfoRepository.findById(taskTypeMaster.getClientId()).get().getClientCode());
-			taskMasterDTO.setClientDescription(clientInfoRepository.findById(taskTypeMaster.getClientId()).get().getClientName());
-			taskMasterDTO.setClientStatus(clientInfoRepository.findById(taskTypeMaster.getClientId()).get().getClientStatus());
+			taskMasterDTO = modelMapper.map(taskTypeMaster, TaskMasterDTO.class);
+			taskMasterDTO
+					.setClientCode(clientInfoRepository.findById(taskTypeMaster.getClientId()).get().getClientCode());
+			taskMasterDTO.setClientDescription(
+					clientInfoRepository.findById(taskTypeMaster.getClientId()).get().getClientName());
+			taskMasterDTO.setClientStatus(
+					clientInfoRepository.findById(taskTypeMaster.getClientId()).get().getClientStatus());
 
 			taskMasterDTOs.add(taskMasterDTO);
 		}
@@ -107,10 +126,11 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 
 	@Override
 	public List<TasksByUserModel> findByClientIdAndUserId(Long clientId, Long userId) {
-            short notDeleted=0;
+		short notDeleted = 0;
 		List<TasksByUserModel> tasksByUserModelList = new ArrayList<>();
 
-		List<TasksByUser> tasksByUserList = tasksByUserRepository.findByClientIdAndUserIdAndIsDelete(clientId, userId, notDeleted);
+		List<TasksByUser> tasksByUserList = tasksByUserRepository.findByClientIdAndUserIdAndIsDelete(clientId, userId,
+				notDeleted);
 		TasksByUserModel tasksByUserModel = null;
 		for (TasksByUser tasksByUser : tasksByUserList) {
 			tasksByUserModel = new TasksByUserModel();
@@ -126,11 +146,13 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 			tasksByUserModel.setTaskName(taskName);
 			tasksByUserModel.setTaskId(taskId);
 			tasksByUserModel.setUserId(userIdent);
-		//	tasksByUserModel.setProjectCode(tasksByUser.getProject_code());
-		//	tasksByUserModel.setTaskCode(tasksByUser.getTask_code());
-			tasksByUserModel.setClientCode(clientInfoRepository.findById(tasksByUser.getClientId()).get().getClientCode());
-			tasksByUserModel.setClientDescription(clientInfoRepository.findById(tasksByUser.getClientId()).get().getClientName());
-			
+			// tasksByUserModel.setProjectCode(tasksByUser.getProject_code());
+			// tasksByUserModel.setTaskCode(tasksByUser.getTask_code());
+			tasksByUserModel
+					.setClientCode(clientInfoRepository.findById(tasksByUser.getClientId()).get().getClientCode());
+			tasksByUserModel.setClientDescription(
+					clientInfoRepository.findById(tasksByUser.getClientId()).get().getClientName());
+
 			tasksByUserModelList.add(tasksByUserModel);
 		}
 
@@ -141,75 +163,78 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 	@Override
 	public List<TasksByClientProjectResponse> findByClientIdAndProjectId(Long clientId, Long projectId) {
 		short isDeleteFlag = 0;
-		List<TaskInfo> taskInfoList = taskInfoRepository.findByClientIdAndProjectIdAndIsDelete(clientId, projectId,isDeleteFlag);
-		
+		List<TaskInfo> taskInfoList = taskInfoRepository.findByClientIdAndProjectIdAndIsDelete(clientId, projectId,
+				isDeleteFlag);
+
 		List<TasksByClientProjectResponse> tasksByClientProjectResponseList = new ArrayList<>();
-		
+
 		constructTaskInfoData(taskInfoList, tasksByClientProjectResponseList);
 		return tasksByClientProjectResponseList;
 	}
 
 	private void constructTaskInfoData(List<TaskInfo> taskInfoList,
 			List<TasksByClientProjectResponse> tasksByClientProjectResponseList) {
-		for(TaskInfo taskInfo: taskInfoList) {
+		for (TaskInfo taskInfo : taskInfoList) {
 			modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-			TasksByClientProjectResponse tasksByClientProjectResponse =  modelMapper.map(taskInfo, TasksByClientProjectResponse.class);
+			TasksByClientProjectResponse tasksByClientProjectResponse = modelMapper.map(taskInfo,
+					TasksByClientProjectResponse.class);
 			Optional<ProjectInfo> projectInfo = projectInfoRepository.findById(taskInfo.getProjectId());
-			if(projectInfo.isPresent()) {
-		//		tasksByClientProjectResponse.setProjectCode(projectInfo.get().getProjectCode());
-				tasksByClientProjectResponse.setProjectDescription(projectInfo.get().getProjectName());	
-			}else {
-		//		tasksByClientProjectResponse.setProjectCode(StringUtils.EMPTY);
+			if (projectInfo.isPresent()) {
+				// tasksByClientProjectResponse.setProjectCode(projectInfo.get().getProjectCode());
+				tasksByClientProjectResponse.setProjectDescription(projectInfo.get().getProjectName());
+			} else {
+				// tasksByClientProjectResponse.setProjectCode(StringUtils.EMPTY);
 				tasksByClientProjectResponse.setProjectDescription(StringUtils.EMPTY);
 			}
-			
+
 			tasksByClientProjectResponse.setTaskTypeDescription(StringUtils.EMPTY);
-			if(null != taskInfo.getTaskType()) {
+			if (null != taskInfo.getTaskType()) {
 				Optional<TaskTypeMaster> taskTypeMaster = taskTypeMasterRepository.findById(taskInfo.getTaskType());
-				if(taskTypeMaster.isPresent()) {
+				if (taskTypeMaster.isPresent()) {
 					tasksByClientProjectResponse.setTaskTypeDescription(taskTypeMaster.get().getTaskTypeDescription());
 				}
 			}
-			
+
 			tasksByClientProjectResponse.setTaskManagerName(StringUtils.EMPTY);
-			if(null != taskInfo.getTaskManager()) {
-				Optional <UserInfo> userInfo = userInfoRepository.findById(taskInfo.getTaskManager());
-				if(userInfo.isPresent()) {
+			if (null != taskInfo.getTaskManager()) {
+				Optional<UserInfo> userInfo = userInfoRepository.findById(taskInfo.getTaskManager());
+				if (userInfo.isPresent()) {
 					String userName = TSMUtil.getFullName(userInfo.get());
 					tasksByClientProjectResponse.setTaskManagerName(userName);
 				}
 			}
-			
+
 			tasksByClientProjectResponse.setTaskStatusDescription(StringUtils.EMPTY);
-			if(null != taskInfo.getTaskStatus()) {
-				Optional <StatusMaster> statusMaster = statusRepository.findById(taskInfo.getTaskStatus());
-				if(statusMaster.isPresent()) {
+			if (null != taskInfo.getTaskStatus()) {
+				Optional<StatusMaster> statusMaster = statusRepository.findById(taskInfo.getTaskStatus());
+				if (statusMaster.isPresent()) {
 					tasksByClientProjectResponse.setTaskStatusDescription(statusMaster.get().getStatusCode());
 				}
 			}
-			
+
 			tasksByClientProjectResponseList.add(tasksByClientProjectResponse);
-			
+
 		}
 	}
 
-	
 	public List<TaskTypesByClientResponse> getTasksByClient(Long clientId) {
 		short notDeleted = 0;
-		List<TaskTypeMaster> tasksByClientList = taskTypeMasterRepository.findByClientIdAndIsDelete(clientId, notDeleted);
+		List<TaskTypeMaster> tasksByClientList = taskTypeMasterRepository.findByClientIdAndIsDelete(clientId,
+				notDeleted);
 		List<TaskTypesByClientResponse> tasksByClientResponseList = new ArrayList<>();
 		TaskTypesByClientResponse tasksByClientResponse = null;
 		for (TaskTypeMaster tasksByClient : tasksByClientList) {
-			tasksByClientResponse = modelMapper.map(tasksByClient, 
-					TaskTypesByClientResponse.class);
-			tasksByClientResponse.setClientCode(clientInfoRepository.findById(tasksByClient.getClientId()).get().getClientCode());
-			
-			tasksByClientResponse.setClientDescription(clientInfoRepository.findById(tasksByClient.getClientId()).get().getClientName());
-			
+			tasksByClientResponse = modelMapper.map(tasksByClient, TaskTypesByClientResponse.class);
+			tasksByClientResponse
+					.setClientCode(clientInfoRepository.findById(tasksByClient.getClientId()).get().getClientCode());
+
+			tasksByClientResponse.setClientDescription(
+					clientInfoRepository.findById(tasksByClient.getClientId()).get().getClientName());
+
 			tasksByClientResponseList.add(tasksByClientResponse);
-	}
+		}
 		return tasksByClientResponseList;
-}
+	}
 
 	@Override
 	@Transactional
@@ -217,7 +242,7 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 		try {
 			for (TaskInfo tskInfo : taskInfo) {
 				addTaskInfo(tskInfo);
-		}
+			}
 //			
 //			TaskInfo taskInfoDB = taskInfoRepository.save(tskInfo);
 //			
@@ -227,78 +252,131 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 //			
 //			processStepsRepository.saveAll(processStepsList);
 //			
-	//		return true;
-		} 
-		catch (Exception ex) {
-			log.error("Exception occured during the save task information",ex);
-		//	return false;
+			// return true;
+		} catch (Exception ex) {
+			log.error("Exception occured during the save task information", ex);
+			// return false;
 		}
-
 	}
 
-
-	
-	public boolean addTaskInfo(TaskInfo tskInfo)
-	{
+	@Override
+	@Transactional
+	public AddProjectResponse saveExternalTaskInfo(ExtTaskMasterDTO extTaskMaster) {
+		AddProjectResponse response = new AddProjectResponse();
 		try {
+			TaskInfo taskInfo = null;
+
 			
+			if (extTaskMaster.getExtProjectId() == null || extTaskMaster.getExtProjectId().isEmpty()
+					|| extTaskMaster.getExtTaskManager() == null || extTaskMaster.getExtTaskManager().isEmpty()
+					|| extTaskMaster.getExtTaskType() == null || extTaskMaster.getExtTaskType().isEmpty()) {
+
+				throw new ExternalIdException("ExternalId not found");
+
+			} else {
+				TaskInfo chkExist = taskInfoRepository.findByExtId(extTaskMaster.getExtTaskInfoId());
+				UserInfo taskManagerId = userInfoRepository.findByExtId(extTaskMaster.getExtTaskManager());
+				TaskTypeMaster taskType = taskTypeRepo.findByExtId(extTaskMaster.getExtTaskType());
+
+				// ExtTaskInfo info = new ExtTaskInfo();
+				TaskInfo tskInfo = new TaskInfo();
+				if (chkExist != null) {
+					tskInfo.setTaskInfoId(chkExist.getTaskInfoId());
+				}
+
+				tskInfo.setClientId(extTaskMaster.getClientId());
+				tskInfo.setProjectId(chkExist.getProjectId());
+				tskInfo.setTaskManager(taskManagerId.getId());
+				tskInfo.setTaskType(taskType.getClientId());
+				taskInfo = taskInfoRepository.save(tskInfo);
+				response.setId(taskInfo.getTaskInfoId());
+				response.setIsSaved(true);
+				// addExtTaskInfo(info);
+			}
+		} catch (Exception ex) {
+			log.error("Exception occured during the save task information", ex);
+		}
+		return response;
+	}
+
+	public boolean addTaskInfo(TaskInfo tskInfo) {
+		try {
+
 			TaskInfo taskInfoDB = taskInfoRepository.save(tskInfo);
-			
+
 			ProjectInfo projectInfo = projectInfoRepository.findById(tskInfo.getProjectId()).get();
-			
+
 			List<ProcessSteps> processStepsList = processService.createProcessSteps(taskInfoDB, projectInfo);
-			
+
 			processStepsRepository.saveAll(processStepsList);
-			
+
 			return true;
 		} catch (Exception ex) {
-			log.error("Exception occured during the save task information",ex);
+			log.error("Exception occured during the save task information", ex);
 			return false;
 		}
 
 	}
-	
-	
-	
+
+	public boolean addExtTaskInfo(ExtTaskInfo extTaskInfo) {
+		try {
+
+			ExtTaskInfo extTaskInfoDB = extTaskInfoRepo.save(extTaskInfo);
+
+			ProjectInfo projectInfo = projectInfoRepository.findById(extTaskInfoDB.getExtProjectId()).get();
+
+			List<ProcessSteps> processStepsList = processService.createProcessStepsExt(extTaskInfoDB, projectInfo);
+
+			processStepsRepository.saveAll(processStepsList);
+
+			return true;
+		} catch (Exception ex) {
+			log.error("Exception occured during the save task information", ex);
+			return false;
+		}
+
+	}
+
 	@Override
 	@Transactional
-	public void editTaskInfo(@Valid List<EditTasksByClientProjectRequest> editasksByClientProjectRequest) throws Exception {
+	public void editTaskInfo(@Valid List<EditTasksByClientProjectRequest> editasksByClientProjectRequest)
+			throws Exception {
 		for (EditTasksByClientProjectRequest updateRequest : editasksByClientProjectRequest) {
 			editTaskInfoById(updateRequest);
 		}
 	}
-	
-	public void editTaskInfoById(@Valid EditTasksByClientProjectRequest editasksByClientProjectRequest) throws Exception {
+
+	public void editTaskInfoById(@Valid EditTasksByClientProjectRequest editasksByClientProjectRequest)
+			throws Exception {
 		Optional<TaskInfo> taskInfoEntity = taskInfoRepository.findById(editasksByClientProjectRequest.getTaskInfoId());
-		if(taskInfoEntity.isPresent()) {
+		if (taskInfoEntity.isPresent()) {
 			TaskInfo taskInfo = modelMapper.map(editasksByClientProjectRequest, TaskInfo.class);
 			taskInfoRepository.save(taskInfo);
-		}else {
-			throw new Exception("Task not found with the provided ID : "+editasksByClientProjectRequest.getTaskInfoId());
+		} else {
+			throw new Exception(
+					"Task not found with the provided ID : " + editasksByClientProjectRequest.getTaskInfoId());
 		}
 	}
-	
+
 	@Override
-	public void editTaskTypesByClient(TaskTypesByClientRequest tasktypesbyclientRequest) throws Exception
-	{
-		Optional<TaskTypeMaster> taskMasterEntity = taskTypeMasterRepository.findById(tasktypesbyclientRequest.getTaskTypeId());
-		if(taskMasterEntity.isPresent()) {
-		TaskTypeMaster taskmaster = modelMapper.map(tasktypesbyclientRequest, TaskTypeMaster.class);
+	public void editTaskTypesByClient(TaskTypesByClientRequest tasktypesbyclientRequest) throws Exception {
+		Optional<TaskTypeMaster> taskMasterEntity = taskTypeMasterRepository
+				.findById(tasktypesbyclientRequest.getTaskTypeId());
+		if (taskMasterEntity.isPresent()) {
+			TaskTypeMaster taskmaster = modelMapper.map(tasktypesbyclientRequest, TaskTypeMaster.class);
+			taskTypeMasterRepository.save(taskmaster);
+		} else {
+			throw new Exception("Task not found with the provided ID : " + tasktypesbyclientRequest.getTaskTypeId());
+		}
+	}
+
+	@Override
+	public void addTaskTypesByClient(TaskTypeMaster taskmaster) {
+
 		taskTypeMasterRepository.save(taskmaster);
-	}else {
-		throw new Exception("Task not found with the provided ID : "+tasktypesbyclientRequest.getTaskTypeId());
+
 	}
-	}
-	
-	@Override 
-	  public void addTaskTypesByClient(TaskTypeMaster taskmaster) {
-		
-		taskTypeMasterRepository.save(taskmaster); 
-	  
-	  }
-	
-	
-	
+
 	@Override
 	public void deleteTaskTypeByClient(Long taskTypeId, String modifiedBy) throws Exception {
 		Optional<TaskTypeMaster> tasktypemaster = taskTypeMasterRepository.findById(taskTypeId);
@@ -309,16 +387,14 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 			tasktypeEntitiy.setModifiedBy(modifiedBy);
 			taskTypeMasterRepository.save(tasktypeEntitiy);
 
-		}else {
-			log.info("No task type found with the provided ID{} in the DB",taskTypeId);
-			throw new Exception("No task type found with the provided ID in the DB :"+taskTypeId);
+		} else {
+			log.info("No task type found with the provided ID{} in the DB", taskTypeId);
+			throw new Exception("No task type found with the provided ID in the DB :" + taskTypeId);
 		}
 	}
-	
-	
-	
+
 	////////////////////
-	
+
 	@Override
 	public void deleteTaskInfoByClient(Long taskInfoId, String modifiedBy) throws Exception {
 		Optional<TaskInfo> taskInfo = taskInfoRepository.findById(taskInfoId);
@@ -329,18 +405,18 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 			tasktypeEntitiy.setModifiedBy(modifiedBy);
 			taskInfoRepository.save(tasktypeEntitiy);
 
-		}else {
-			log.info("No task Info found with the provided ID{} in the DB",taskInfoId);
-			throw new Exception("No task Info found with the provided ID in the DB :"+taskInfoId);
+		} else {
+			log.info("No task Info found with the provided ID{} in the DB", taskInfoId);
+			throw new Exception("No task Info found with the provided ID in the DB :" + taskInfoId);
 		}
 	}
-			
 
 	@Override
 	public List<TasksByClientProjectResponse> findByClientIdAndProjectIdAsHierarchy(Long clientId, Long projectId) {
 
 		short isDeleteFlag = 0;
-		List<TaskInfo> taskInfoList = taskInfoRepository.findByClientIdAndProjectIdAndIsDelete(clientId, projectId,isDeleteFlag);
+		List<TaskInfo> taskInfoList = taskInfoRepository.findByClientIdAndProjectIdAndIsDelete(clientId, projectId,
+				isDeleteFlag);
 
 		List<TasksByClientProjectResponse> tasksByClientProjectResponseList = new ArrayList<>();
 
@@ -351,7 +427,7 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 	}
 
 	@Override
-	public void updateTaskSortKeyByID(Long taskInfoId, Long sortKey){
+	public void updateTaskSortKeyByID(Long taskInfoId, Long sortKey) {
 		Optional<TaskInfo> taskInfo = taskInfoRepository.findById(taskInfoId);
 		if (taskInfo.isPresent()) {
 
@@ -365,15 +441,16 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 		}
 
 	}
-	
+
 	/**
 	 * This method updates the multiple sortKeys in one call.
+	 * 
 	 * @param taskInfoId
 	 * @param sortKey
 	 * @throws Exception
 	 */
 	@Override
-	public void updateTaskSortKeyByIDs(List<UpdateTaskInfoRequest> taskIdWithSortKeys){
+	public void updateTaskSortKeyByIDs(List<UpdateTaskInfoRequest> taskIdWithSortKeys) {
 
 		for (UpdateTaskInfoRequest updateTaskInfoRequest : taskIdWithSortKeys) {
 			updateTaskSortKeyByID(updateTaskInfoRequest.getTaskInfoId(), updateTaskInfoRequest.getSortKey());
