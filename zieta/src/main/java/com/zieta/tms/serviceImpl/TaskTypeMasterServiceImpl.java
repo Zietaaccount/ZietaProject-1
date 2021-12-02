@@ -362,6 +362,8 @@ public class TaskTypeMasterServiceImpl implements TaskTypeMasterService {
 			tasktypeEntitiy.setIsDelete(delete);
 			tasktypeEntitiy.setModifiedBy(modifiedBy);
 			taskTypeMasterRepository.save(tasktypeEntitiy);
+			
+			
 
 		} else {
 			log.info("No task type found with the provided ID{} in the DB", taskTypeId);
